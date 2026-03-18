@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>워터체크</title>
+</head>
+<body>
+    <h1>💧 워터체크</h1>
+    <p>오늘 마신 물: {{ count }} 잔 / 목표: {{ goal }} 잔</p>
+
+    <form action="/drink" method="post">
+        <button type="submit">물 마시기</button>
+    </form>
+
+    <br>
+    <a href="/result">결과 확인</a>
+</body>
+</html>
