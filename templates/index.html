@@ -1,17 +1,126 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <title>워터체크</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Water Log Custom</title>
+    <style>
+        :root { --main-cyan: #00f2ff; --glass: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; background: #080808; color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+
+        /* 배경 액체 레이어 */
+        .fluid-bg {
+            position: absolute; bottom: 0; width: 100%;
+            background: linear-gradient(180deg, #00f2ff 0%, #0062ff 100%);
+            transition: height 1s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1; filter: drop-shadow(0 0 30px #00f2ff);
+        }
+        .fluid-bg::after {
+            content: ""; position: absolute; top: -20px; left: 0; width: 200%; height: 40px;
+            background: rgba(255,255,255,0.2); border-radius: 40%; animation: wave 4s linear infinite;
+        }
+        @keyframes wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+        /* 메인 카드 */
+        .card {
+            position: relative; z-index: 10; width: 320px; padding: 40px;
+            background: var(--glass); backdrop-filter: blur(25px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 50px;
+            text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+
+        .count-val { font-size: 100px; font-weight: 900; margin: 0; cursor: pointer; text-shadow: 0 0 20px var(--main-cyan); }
+        
+        /* 목표 설정 영역 */
+        .goal-setter { margin-top: 10px; font-size: 14px; opacity: 0.6; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .goal-input { 
+            background: none; border: 1px solid rgba(255,255,255,0.3); color: white; 
+            width: 40px; text-align: center; border-radius: 5px; font-weight: bold; outline: none;
+        }
+
+        .btn-main {
+            margin-top: 40px; width: 100%; padding: 20px; border-radius: 20px;
+            border: none; background: white; color: black; font-size: 18px; font-weight: 800;
+            cursor: pointer; transition: 0.2s;
+        }
+        .btn-main:active { transform: scale(0.95); opacity: 0.8; }
+
+        .log-list { margin-top: 20px; font-size: 12px; opacity: 0.4; height: 40px; overflow: hidden; }
+    </style>
 </head>
 <body>
-    <h1>💧 워터체크</h1>
-    <p>오늘 마신 물: {{ count }} 잔 / 목표: {{ goal }} 잔</p>
 
-    <form action="/drink" method="post">
-        <button type="submit">물 마시기</button>
-    </form>
+    <div class="fluid-bg" id="fluid"></div>
 
-    <br>
-    <a href="/result">결과 확인</a>
+    <div class="card">
+        <div style="font-size: 12px; letter-spacing: 3px; opacity: 0.5;">CURRENT INTAKE</div>
+        <h1 class="count-val" id="current-display" onclick="addWater()">0</h1>
+        
+        <div class="goal-setter">
+            GOAL: 
+            <input type="number" id="goal-num" class="goal-input" value="8" onchange="updateUI()"> 
+            CUPS
+        </div>
+
+        <button class="btn-main" onclick="addWater()">DRINK +1</button>
+        
+        <div class="log-list" id="log">Click to start tracking</div>
+        <div style="margin-top: 20px; font-size: 10px; opacity: 0.3; cursor: pointer;" onclick="reset()">RESET SYSTEM</div>
+    </div>
+
+    <script>
+        let count = 0;
+
+        function init() {
+            // 로컬 스토리지에서 데이터 복구
+            const saved = JSON.parse(localStorage.getItem('water_custom_v1')) || { count: 0, goal: 8 };
+            count = saved.count;
+            document.getElementById('goal-num').value = saved.goal;
+            updateUI();
+        }
+
+        function addWater() {
+            count++;
+            playTick();
+            updateUI();
+        }
+
+        function updateUI() {
+            const goal = parseInt(document.getElementById('goal-num').value) || 8;
+            document.getElementById('current-display').innerText = count;
+            
+            // 물 높이 계산
+            const ratio = Math.min((count / goal) * 100, 100);
+            document.getElementById('fluid').style.height = ratio + '%';
+
+            // 데이터 저장
+            localStorage.setItem('water_custom_v1', JSON.stringify({ count, goal }));
+
+            // 로그 업데이트
+            if(count > 0) {
+                document.getElementById('log').innerText = `Last drink at ${new Date().toLocaleTimeString()}`;
+            }
+        }
+
+        function playTick() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sine'; o.frequency.value = 800;
+            g.gain.setValueAtTime(0.1, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(); o.stop(ctx.currentTime + 0.1);
+        }
+
+        function reset() {
+            if(confirm('모든 기록을 초기화할까요?')) {
+                count = 0;
+                updateUI();
+            }
+        }
+
+        init();
+    </script>
 </body>
 </html>
